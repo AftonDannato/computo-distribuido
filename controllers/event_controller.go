@@ -19,7 +19,7 @@ func NewEventController(model *models.EventModel) *EventController {
 }
 
 func (c *EventController) GetEvents(w http.ResponseWriter, r *http.Request) {
-	eventos, err := c.Model.GetEvents()
+	eventos, err := c.Model.GetAllEvents()
 
 	if err != nil {
 		http.Error(w, "Error al obtener los eventos", http.StatusInternalServerError)
@@ -36,7 +36,7 @@ func (c *EventController) GetEvents(w http.ResponseWriter, r *http.Request) {
 }
 
 func (c *EventController) Dashboard(w http.ResponseWriter, r *http.Request) {
-	eventos, err := c.Model.GetEvents()
+	eventos, err := c.Model.GetAllEvents()
 
 	if err != nil {
 		http.Error(w, "Error al obtener los eventos", http.StatusInternalServerError)

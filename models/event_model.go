@@ -24,16 +24,7 @@ func NewEventModel(db *sql.DB) *EventModel {
 	}
 }
 
-func (m *EventModel) GetEvents() ([]Event, error) {
-	rows, err := m.DB.Query(`
-		SELECT *
-		FROM eventos
-		ORDER BY fecha DESC
-	`)
-
-	if err != nil {
-		return nil, err
-	}
+func (m *EventModel) scanEvents(rows *sql.Rows) ([]Event, error) {
 	defer rows.Close()
 
 	var eventos []Event
@@ -62,4 +53,33 @@ func (m *EventModel) GetEvents() ([]Event, error) {
 	}
 
 	return eventos, nil
+}
+
+func (m *EventModel) GetAllEvents() ([]Event, error) {
+	rows, err := m.DB.Query(`
+		SELECT *
+		FROM eventos
+		ORDER BY fecha DESC
+	`)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return m.scanEvents(rows)
+}
+
+func (m *EventModel) GetCriticalEvents() ([]Event, error) {
+	rows, err := m.DB.Query(`
+		SELECT *
+		FROM eventos
+		WHERE severidad IN ('Alta', 'Crítica')
+		ORDER BY fecha DESC
+	`)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return m.scanEvents(rows)
 }
