@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Monitor de Seguridad</title>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1100px;
+            margin: 40px auto;
+            background: #f4f4f4;
+        }
+
+        h1 {
+            margin-bottom: 25px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+        }
+
+        th, td {
+            padding: 12px;
+            border-bottom: 1px solid #ddd;
+            text-align: left;
+        }
+
+        th {
+            background: #eee;
+        }
+    </style>
+</head>
+
+<body>
+
+<h1>Monitor de Eventos de Seguridad</h1>
+
+<table>
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Origen</th>
+            <th>Tipo</th>
+            <th>Severidad</th>
+            <th>Fecha</th>
+            <th>Atendido</th>
+        </tr>
+    </thead>
+
+    <tbody>
+        {{range .}}
+        <tr>
+            <td>{{.ID}}</td>
+            <td>{{.Origen}}</td>
+            <td>{{.Tipo}}</td>
+            <td>{{.Severidad}}</td>
+            <td>{{.Fecha}}</td>
+            <td>{{.Atendido}}</td>
+        </tr>
+        {{end}}
+    </tbody>
+</table>
+
+</body>
+</html>

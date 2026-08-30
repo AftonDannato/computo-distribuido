@@ -25,6 +25,7 @@ func main() {
 
 	router := http.NewServeMux()
 
+	router.HandleFunc("GET /", eventController.Dashboard)
 	router.HandleFunc("GET /events", eventController.GetEvents)
 
 	log.Println("Servidor escuchando en http://localhost:8080")
