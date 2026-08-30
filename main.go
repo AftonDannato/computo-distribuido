@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"log"
 	"net/http"
+	"os"
 
 	_ "github.com/lib/pq"
 
@@ -12,7 +13,11 @@ import (
 )
 
 func main() {
-	dsn := "host=localhost port=5432 user=postgres password=postgres dbname=security_monitor sslmode=disable"
+	dsn := os.Getenv("DATABASE_URL")
+
+	if dsn == "" {
+		dsn = "host=localhost port=5432 user=postgres password=postgres dbname=security_monitor sslmode=disable"
+	}
 
 	db, err := sql.Open("postgres", dsn)
 	if err != nil {
