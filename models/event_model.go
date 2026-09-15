@@ -5,6 +5,7 @@ import (
 	"time"
 )
 
+// Estructura que almacena un registro de ciberseguridad
 type Event struct {
 	ID        int
 	Origen    string
@@ -14,16 +15,19 @@ type Event struct {
 	Atendido  bool
 }
 
+// Modelo dónde se guarda la conexión a la DB (inyección)
 type EventModel struct {
 	DB *sql.DB
 }
 
+// Función que se llama para levantar la conexión
 func NewEventModel(db *sql.DB) *EventModel {
 	return &EventModel{
 		DB: db,
 	}
 }
 
+// Función encargada de leer  registros obtenidos de una query y convertirlos a estructuras Event
 func (m *EventModel) scanEvents(rows *sql.Rows) ([]Event, error) {
 	defer rows.Close()
 
@@ -55,6 +59,7 @@ func (m *EventModel) scanEvents(rows *sql.Rows) ([]Event, error) {
 	return eventos, nil
 }
 
+// Función encargada de obtener todos los eventos de la DB y devolverlos convertidos ya en estructuras
 func (m *EventModel) GetAllEvents() ([]Event, error) {
 	rows, err := m.DB.Query(`
 		SELECT *
@@ -69,6 +74,7 @@ func (m *EventModel) GetAllEvents() ([]Event, error) {
 	return m.scanEvents(rows)
 }
 
+// Función encargada de obtener los eventos criticos de la DB y devolverlos convertidos ya en estructuras
 func (m *EventModel) GetCriticalEvents() ([]Event, error) {
 	rows, err := m.DB.Query(`
 		SELECT *

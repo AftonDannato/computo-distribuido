@@ -8,16 +8,20 @@ import (
 	"github.com/AftonDannato/computo-distribuido/models"
 )
 
+// Controlador de eventos que almacena el modelo de eventos
 type EventController struct {
 	Model *models.EventModel
 }
 
+// Función para crear el controlador de eventos
 func NewEventController(model *models.EventModel) *EventController {
 	return &EventController{
 		Model: model,
 	}
 }
 
+// Función que, en el MVC original, devolvía todos los eventos.
+// Deprecado, las consultas ahora se hacen desde los workers
 func (c *EventController) GetEvents(w http.ResponseWriter, r *http.Request) {
 	eventos, err := c.Model.GetAllEvents()
 
@@ -35,6 +39,8 @@ func (c *EventController) GetEvents(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// Función que, en el MVC original, mostraba un dashboard con los eventos
+// Deprecado, actualmente no implementado en la arquitectura actual
 func (c *EventController) Dashboard(w http.ResponseWriter, r *http.Request) {
 	eventos, err := c.Model.GetAllEvents()
 
