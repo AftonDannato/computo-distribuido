@@ -1,0 +1,3 @@
+[
+  { "prefix": "/events", "target": "http://events-backend:8080" }
+]

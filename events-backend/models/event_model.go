@@ -17,13 +17,13 @@ type Event struct {
 
 // Modelo dónde se guarda la conexión a la DB (inyección)
 type EventModel struct {
-	DB *sql.DB
+	db *sql.DB
 }
 
 // Función que se llama para levantar la conexión
 func NewEventModel(db *sql.DB) *EventModel {
 	return &EventModel{
-		DB: db,
+		db: db,
 	}
 }
 
@@ -61,7 +61,7 @@ func (m *EventModel) scanEvents(rows *sql.Rows) ([]Event, error) {
 
 // Función encargada de obtener todos los eventos de la DB y devolverlos convertidos ya en estructuras
 func (m *EventModel) GetAllEvents() ([]Event, error) {
-	rows, err := m.DB.Query(`
+	rows, err := m.db.Query(`
 		SELECT *
 		FROM eventos
 		ORDER BY fecha DESC
@@ -76,7 +76,7 @@ func (m *EventModel) GetAllEvents() ([]Event, error) {
 
 // Función encargada de obtener los eventos criticos de la DB y devolverlos convertidos ya en estructuras
 func (m *EventModel) GetCriticalEvents() ([]Event, error) {
-	rows, err := m.DB.Query(`
+	rows, err := m.db.Query(`
 		SELECT *
 		FROM eventos
 		WHERE severidad IN ('Alta', 'Crítica')

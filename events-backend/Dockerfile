@@ -6,15 +6,14 @@ COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
 
-RUN go build -o server .
+RUN go build -o events-backend .
 
 
 FROM alpine:latest
 
 WORKDIR /app
 
-COPY --from=build /app/server .
-COPY --from=build /app/templates ./templates
+COPY --from=build /app/events-backend .
 
 EXPOSE 8080
-CMD ["./server"]
+CMD ["./events-backend"]
