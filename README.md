@@ -1,106 +1,149 @@
-# Security Event Monitor
+# Monitor de Seguridad Distribuido
 
-Monitor de eventos de ciberseguridad desarrollado en Go, PostgreSQL y Docker.
+Frontend, gateway con load balancing, tres tipos de backend y PostgreSQL:
 
 ```text
-client → middleware (:8080) → worker → model → PostgreSQL
+                         ┌──> events-backend ×3
+client → frontend → gateway ──> detection-backend ×3
+                         └──> incidents-backend ×3
+                                   ↓
+                               PostgreSQL
 ```
 
 ## Structure
 
 ```text
 computo-distribuido/
-├── controllers/
-│   └── event_controller.go
-├── models/
-│   └── event_model.go
-├── templates/
-│   └── index.html
-├── main.go
-├── schema.sql
 ├── docker-compose.yml
-├── Dockerfile
-├── go.mod
-└── go.sum
+├── schema.sql
+├── setup.bat
+├── setup.sh
+├── frontend/
+├── gateway/
+├── events-backend/
+├── detection-backend/
+└── incidents-backend/
 ```
-
-## How it works
-
-### Middleware (`main.go`)
-
-- Recibe las peticiones HTTP mediante `http.ServeMux`.
-- Vincula estáticamente cada ruta con el channel de su servicio correspondiente.
-- Utiliza un worker por servicio, ejecutado como goroutine.
-- Cada petición genera un channel de respuesta propio, incluido dentro de un `Job`.
-- El worker procesa el trabajo y devuelve un `Result` mediante dicho channel.
-
-
-### Model (`models/event_model.go`)
-
-- Contiene la conexión a PostgreSQL inyectada como dependencia.
-- `GetAllEvents()` obtiene todos los eventos registrados.
-- `GetCriticalEvents()` obtiene los eventos con severidad `Alta` o `Crítica`.
-- `scanEvents()` convierte las filas obtenidas de PostgreSQL en estructuras `Event`.
-
-### PostgreSQL
-
-- Se ejecuta dentro de Docker.
-- `schema.sql` crea la tabla `eventos`.
-- También inserta registros iniciales para realizar pruebas.
-
-### Controllers
-
-El directorio `controllers/` pertenece a la implementación MVC original del proyecto.
-
-Actualmente las consultas son procesadas directamente por los workers mediante el modelo, por lo que estos controladores se conservan únicamente como parte de la versión anterior.
 
 ## Run it
 
-Solo se requiere Docker y Docker Compose.
+### Windows
+
+```cmd
+setup.bat
+```
+
+### Linux
+
+Distribuciones basadas en Debian/Ubuntu:
 
 ```bash
-git clone https://github.com/AftonDannato/computo-distribuido.git
-cd computo-distribuido
+chmod +x setup.sh
+./setup.sh
+```
+
+### Manual
+
+```bash
 docker compose up --build
 ```
 
-La aplicación estará disponible en:
+Después del primer build:
+
+```bash
+docker compose up
+```
+
+Abrir:
 
 ```text
 http://localhost:8080
 ```
 
-### Obtener todos los eventos
+## How it works
 
-```bash
-curl localhost:8080/api/events
-```
+**Frontend**
+- Único servicio expuesto al host en `localhost:8080`.
+- Muestra eventos, alertas e incidentes mediante `html/template`.
+- Permite filtrar la información mostrada.
+- Permite crear eventos, alertas e incidentes.
+- Se comunica internamente con el gateway; las rutas de los backends no se exponen directamente.
 
-### Obtener eventos de severidad Alta o Crítica
+**Gateway**
+- Lee `routes.json` como service discovery estático.
+- Agrupa varias instancias por prefijo.
+- Distribuye peticiones mediante Round Robin.
+- Comprueba `/heartbeat` de cada instancia periódicamente.
+- Omite backends marcados como no saludables.
+- Devuelve `503` si no existe ninguna instancia saludable para un servicio.
+- Limita las peticiones concurrentes mediante un canal usado como semáforo.
 
-```bash
-curl localhost:8080/api/critical
-```
-
-También pueden probarse directamente desde el navegador:
+**Events Backend**
+- Tres instancias idénticas.
+- Registra y consulta eventos de seguridad.
+- Rutas:
 
 ```text
-http://localhost:8080/api/events
-http://localhost:8080/api/critical
+GET  /events
+GET  /events/critical
+POST /events
+GET  /heartbeat
 ```
 
-Al realizar las peticiones, los logs permiten observar qué worker recibió y respondió cada trabajo.
+**Detection Backend**
+- Tres instancias idénticas.
+- Registra y consulta alertas relacionadas con eventos.
+- Determina la severidad de una alerta a partir de su regla.
+- Rutas:
 
-### Detener el servicio
-
-```bash
-docker compose down
+```text
+GET  /detection
+GET  /detection/critical
+POST /detection
+GET  /heartbeat
 ```
 
-Para eliminar también el volumen de PostgreSQL:
+**Incidents Backend**
+- Tres instancias idénticas.
+- Registra y consulta incidentes relacionados con alertas.
+- Los nuevos incidentes comienzan con estado `Abierto`.
+- Rutas:
 
-```bash
-docker compose down -v
+```text
+GET  /incidents
+GET  /incidents/open
+POST /incidents
+GET  /heartbeat
 ```
 
-Al eliminar el volumen, `schema.sql` volverá a ejecutarse en la siguiente inicialización.
+**PostgreSQL**
+- Base de datos compartida por las instancias.
+- Tablas principales:
+
+```text
+eventos → alertas → incidentes
+```
+
+- Los datos persisten mediante el volumen `postgres_data`.
+
+**Load balancing**
+
+Cada servicio posee tres instancias:
+
+```text
+events-backend-1
+events-backend-2
+events-backend-3
+
+detection-backend-1
+detection-backend-2
+detection-backend-3
+
+incidents-backend-1
+incidents-backend-2
+incidents-backend-3
+```
+
+El gateway realiza Round Robin únicamente entre instancias saludables.
+
+Al detener una instancia, el heartbeat termina marcándola como no saludable y deja de recibir tráfico.
