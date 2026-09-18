@@ -1,3 +1,10 @@
 [
-  { "prefix": "/events", "target": "http://events-backend:8080" }
+  { 
+    "prefix": "/events", 
+    "targets": [
+      "http://events-backend-1:8080",
+      "http://events-backend-2:8080",
+      "http://events-backend-3:8080"
+    ] 
+  }
 ]

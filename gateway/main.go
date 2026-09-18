@@ -9,6 +9,7 @@ import (
 	"os"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	_ "github.com/lib/pq"
@@ -17,8 +18,8 @@ import (
 // Estructura para almacenar cada una de las rutas de nuestro JSON. `json:"prefix"` y `json:"target"`
 // son metadatos de las variables Prefix y Target que les indican que atributo del JSON tomar
 type Route struct {
-	Prefix string `json:"prefix"`
-	Target string `json:"target"`
+	Prefix  string   `json:"prefix"`
+	Targets []string `json:"targets"`
 }
 
 // Estructura que representará nuestro gateway. Esta contiene un arreglo con las rutas extraidas del JSON,
@@ -26,11 +27,50 @@ type Route struct {
 // con un mutex para regular el acceso concurrente. También contiene un semaforo para regular cuantas peticiones
 // pueden procesarse a la vez
 type Gateway struct {
-	routes       []Route
-	proxies      map[string]*httputil.ReverseProxy
-	healthMutex  sync.RWMutex
-	healthStatus map[string]bool
-	sem          chan struct{}
+	groups []*RouteGroup
+	sem    chan struct{}
+}
+
+// Debido a que ahora hay más de un backend, creamos una estructura para agrupar su URL, su estado y
+// su reverse proxy, en lugar de tenerlos almacenados en el gateway directamente
+// Cada backend es el unico que accede a su estatus, por lo que no necesitamos protegerlo con un mutex
+type Backend struct {
+	URL          *url.URL
+	Proxy        *httputil.ReverseProxy
+	healthStatus atomic.Bool
+}
+
+// Estructura en la que agrupamos un prefijo con los backends que pueden atender a las peticiones que se le hagan
+type RouteGroup struct {
+	Prefix       string
+	Backends     []*Backend
+	counter      int
+	counterMutex sync.Mutex
+}
+
+// Obtiene el siguiente índice del round robin y avanza el contador de manera concurrentemente segura.
+func (routeGroup *RouteGroup) nextIndex(n int) int {
+	routeGroup.counterMutex.Lock()
+	defer routeGroup.counterMutex.Unlock()
+	idx := routeGroup.counter
+	routeGroup.counter = (routeGroup.counter + 1) % n
+	return idx
+}
+
+// Función que hace el round robin que escoge un backend sano para responder una petición entrante
+func (routeGroup *RouteGroup) chooseBackend() *Backend {
+	n := len(routeGroup.Backends)
+	// Buscamos en nuestro grupo de Backends el primero que esté sano, empezando por el backend siguiente
+	// al backend que respondió la última petición al servicio.
+	for i := 0; i < n; i++ {
+		idx := routeGroup.nextIndex(n)
+		b := routeGroup.Backends[idx]
+		if b.healthStatus.Load() {
+			return b
+		}
+	}
+	// Si recorremos todo nuestro grupo y no se encontró ningún Backend sano, se indica devolviendo nil
+	return nil
 }
 
 // Función para la carga de rutas en el JSON y conversión de estas a estructuras de tipo Route
@@ -48,28 +88,31 @@ func loadRoutes(path string) ([]Route, error) {
 
 // Función para crear el Gateway
 func NewGateway(routes []Route, maxPetitions int) *Gateway {
-	// Creamos variables donde guardaremos los mapas de nuestros reverse proxies y el estado de los backends
-	proxies := make(map[string]*httputil.ReverseProxy)
-	health := make(map[string]bool)
-
+	// Creamos un slice que contiene nuestros grupos de ruta
+	var groups []*RouteGroup
+	// Para cada ruta, iteramos sobre los posibles backends que pueden responder a ese prefix, y los agregamos
+	// a un RouteGroupe, así el gateway tendrá un pool de backends en lugar de uno solo
 	for _, route := range routes {
-		// Leemos las rutas previamente cargadas y las convertimos en una variable de tipo URL que Go entienda
-		target, err := url.Parse(route.Target)
-		if err != nil {
-			log.Fatalf("invalid target url %s: %v", route.Target, err)
+		routeGroup := &RouteGroup{Prefix: route.Prefix}
+		for _, targetRoute := range route.Targets {
+			// Leemos las rutas previamente cargadas y las convertimos en una variable de tipo URL que Go entienda
+			targetURL, err := url.Parse(targetRoute)
+			if err != nil {
+				log.Fatalf("invalid target url %s: %v", targetRoute, err)
+			}
+			// Creamos una instancia de "Backend" que almacenará su dirección y el RP por el cual se comunica
+			backend := &Backend{URL: targetURL, Proxy: httputil.NewSingleHostReverseProxy(targetURL)}
+			routeGroup.Backends = append(routeGroup.Backends, backend)
 		}
-		// Creamos un reverse proxy para cada backend
-		proxies[route.Prefix] = httputil.NewSingleHostReverseProxy(target)
-		health[route.Target] = false
+		// Cuando se obtienen todos los backends asociados a la ruta, se guarda el RouteGroup en el gatewy
+		groups = append(groups, routeGroup)
 	}
 
-	// Devuelves el gateway con las rutas y reverse proxies ya cargados. Así pues, regresamos un lugar para
-	// ir registrando los estados de los backends y semaforo que controlará el número máximo de peticiones
+	// Devuelves el gateway con los grupos de backends. Así pues, regresamos un semaforo que controlará el
+	// número máximo de peticiones
 	return &Gateway{
-		routes:       routes,
-		proxies:      proxies,
-		healthStatus: health,
-		sem:          make(chan struct{}, maxPetitions),
+		groups: groups,
+		sem:    make(chan struct{}, maxPetitions),
 	}
 }
 
@@ -81,16 +124,24 @@ func (gateway *Gateway) ServeHTTP(writer http.ResponseWriter, request *http.Requ
 	gateway.sem <- struct{}{}
 	defer func() { <-gateway.sem }()
 
-	// Buscamos en nuestros proxies el que corresponda a la ruta de la petición.
-	for prefix, proxy := range gateway.proxies {
-		// Si alguno de los proxies corresponde a la ruta, el gateway le redirige la petición
-		if strings.HasPrefix(request.URL.Path, prefix) {
-			log.Printf("[%s] %s -> matched prefix %q", request.Method, request.URL.Path, prefix)
-			proxy.ServeHTTP(writer, request)
+	// Buscamos en nuestros routeGroups el que corresponda a la ruta de la petición.
+	for _, routeGroup := range gateway.groups {
+		// Mientras el prefix correspondiente al grupo actual no sea el de la petición, lo saltamos
+		if !strings.HasPrefix(request.URL.Path, routeGroup.Prefix) {
+			continue
+		}
+		chosenBackend := routeGroup.chooseBackend()
+		// Si no encuentra ningún backend vivo, el gateway responde error 503
+		if chosenBackend == nil {
+			http.Error(writer, "No healthy backend available", http.StatusServiceUnavailable)
 			return
 		}
+		log.Printf("[%s] %q -> matched prefix %q -> handled by: %s", request.Method, request.URL.Path,
+			routeGroup.Prefix, chosenBackend.URL.Host)
+		chosenBackend.Proxy.ServeHTTP(writer, request)
+		return
 	}
-	// Si no, el gateway responde error 404
+	// Si no encuentra ningun routeGroup que responda a esa petición, el gateway responde error 404
 	http.NotFound(writer, request)
 }
 
@@ -105,16 +156,15 @@ func (gateway *Gateway) startHeartbeatMonitor(interval time.Duration) {
 			// Hacemos un grupo de espera para asegurarnos de que todos los health checks terminen antes
 			// de empezar una nueva ronda
 			var waitgroup sync.WaitGroup
-			for _, routes := range gateway.routes {
-				waitgroup.Add(1)
-				// Por cada ruta, checamos su estado (healthy/not healthy) y lo guardamos en la gateway
-				go func(target string) {
-					defer waitgroup.Done()
-					isOk := checkHeartbeat(target, interval)
-					gateway.healthMutex.Lock()
-					gateway.healthStatus[target] = isOk
-					gateway.healthMutex.Unlock()
-				}(routes.Target)
+			for _, groups := range gateway.groups {
+				for _, backend := range groups.Backends {
+					waitgroup.Add(1)
+					// Por cada backend, checamos su estado (healthy/not healthy) y lo guardamos
+					go func(backend *Backend) {
+						defer waitgroup.Done()
+						backend.healthStatus.Store(checkHeartbeat(backend.URL.String(), interval))
+					}(backend)
+				}
 			}
 			waitgroup.Wait()
 		}
@@ -142,10 +192,21 @@ func checkHeartbeat(target string, interval time.Duration) bool {
 
 // Función del gateway que nos permite obtener y responder los estatus de los backends
 func (gateway *Gateway) statusHandler(writer http.ResponseWriter, request *http.Request) {
-	gateway.healthMutex.RLock()
-	defer gateway.healthMutex.RUnlock()
+	type backendStatus struct {
+		Target  string `json:"target"`
+		Healthy bool   `json:"healthy"`
+	}
+	// ya no quiero comentar, tengo sueño...
+	out := make(map[string][]backendStatus)
+	for _, routeGroup := range gateway.groups {
+		var list []backendStatus
+		for _, backend := range routeGroup.Backends {
+			list = append(list, backendStatus{Target: backend.URL.String(), Healthy: backend.healthStatus.Load()})
+		}
+		out[routeGroup.Prefix] = list
+	}
 	writer.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(writer).Encode(gateway.healthStatus)
+	json.NewEncoder(writer).Encode(out)
 }
 
 // Función que responde si el gateway está vivo

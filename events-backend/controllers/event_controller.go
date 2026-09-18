@@ -39,8 +39,6 @@ func (controller *EventController) handleRequest(request func() ([]models.Event,
 	}
 }
 
-// Función que, en el MVC original, devolvía todos los eventos.
-// Deprecado, las consultas ahora se hacen desde los workers
 func (controller *EventController) GetAllEvents(w http.ResponseWriter, r *http.Request) {
 	controller.handleRequest(controller.model.GetAllEvents)(w, r)
 }
