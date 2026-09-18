@@ -6,5 +6,21 @@
       "http://events-backend-2:8080",
       "http://events-backend-3:8080"
     ] 
+  },
+  {
+    "prefix": "/detection",
+    "targets": [
+      "http://detection-backend-1:8080",
+      "http://detection-backend-2:8080",
+      "http://detection-backend-3:8080"
+    ]
+  },
+  {
+    "prefix": "/incidents",
+    "targets": [
+      "http://incidents-backend-1:8080",
+      "http://incidents-backend-2:8080",
+      "http://incidents-backend-3:8080"
+    ]
   }
 ]

@@ -20,7 +20,7 @@ type EventModel struct {
 	db *sql.DB
 }
 
-// Función que se llama para levantar la conexión
+// Función que se llama para crear el modelo con la conexión inyectada
 func NewEventModel(db *sql.DB) *EventModel {
 	return &EventModel{
 		db: db,
@@ -28,7 +28,7 @@ func NewEventModel(db *sql.DB) *EventModel {
 }
 
 // Función encargada de leer  registros obtenidos de una query y convertirlos a estructuras Event
-func (m *EventModel) scanEvents(rows *sql.Rows) ([]Event, error) {
+func (model *EventModel) scanEvents(rows *sql.Rows) ([]Event, error) {
 	defer rows.Close()
 
 	var eventos []Event
@@ -60,8 +60,8 @@ func (m *EventModel) scanEvents(rows *sql.Rows) ([]Event, error) {
 }
 
 // Función encargada de obtener todos los eventos de la DB y devolverlos convertidos ya en estructuras
-func (m *EventModel) GetAllEvents() ([]Event, error) {
-	rows, err := m.db.Query(`
+func (model *EventModel) GetAllEvents() ([]Event, error) {
+	rows, err := model.db.Query(`
 		SELECT *
 		FROM eventos
 		ORDER BY fecha DESC
@@ -71,12 +71,12 @@ func (m *EventModel) GetAllEvents() ([]Event, error) {
 		return nil, err
 	}
 
-	return m.scanEvents(rows)
+	return model.scanEvents(rows)
 }
 
 // Función encargada de obtener los eventos criticos de la DB y devolverlos convertidos ya en estructuras
-func (m *EventModel) GetCriticalEvents() ([]Event, error) {
-	rows, err := m.db.Query(`
+func (model *EventModel) GetCriticalEvents() ([]Event, error) {
+	rows, err := model.db.Query(`
 		SELECT *
 		FROM eventos
 		WHERE severidad IN ('Alta', 'Crítica')
@@ -87,5 +87,5 @@ func (m *EventModel) GetCriticalEvents() ([]Event, error) {
 		return nil, err
 	}
 
-	return m.scanEvents(rows)
+	return model.scanEvents(rows)
 }

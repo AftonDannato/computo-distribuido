@@ -66,6 +66,84 @@ services:
     networks:
       - microservices-net
 
+  detection-backend-1:
+    build: ./detection-backend
+    environment:
+      INSTANCE_ID: detection-1
+      DATABASE_URL: "host=db port=5432 user=postgres password=postgres dbname=security_monitor sslmode=disable"
+  # ports:
+  #  - "8080:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - microservices-net
+
+  detection-backend-2:
+    build: ./detection-backend
+    environment:
+      INSTANCE_ID: detection-2
+      DATABASE_URL: "host=db port=5432 user=postgres password=postgres dbname=security_monitor sslmode=disable"
+  # ports:
+  #  - "8080:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - microservices-net
+
+  detection-backend-3:
+    build: ./detection-backend
+    environment:
+      INSTANCE_ID: detection-3
+      DATABASE_URL: "host=db port=5432 user=postgres password=postgres dbname=security_monitor sslmode=disable"
+  # ports:
+  #  - "8080:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - microservices-net
+  
+  incidents-backend-1:
+    build: ./incidents-backend
+    environment:
+      INSTANCE_ID: incidents-1
+      DATABASE_URL: "host=db port=5432 user=postgres password=postgres dbname=security_monitor sslmode=disable"
+  # ports:
+  #  - "8080:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - microservices-net
+
+  incidents-backend-2:
+    build: ./incidents-backend
+    environment:
+      INSTANCE_ID: incidents-2
+      DATABASE_URL: "host=db port=5432 user=postgres password=postgres dbname=security_monitor sslmode=disable"
+  # ports:
+  #  - "8080:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - microservices-net
+
+  incidents-backend-3:
+    build: ./incidents-backend
+    environment:
+      INSTANCE_ID: incidents-3
+      DATABASE_URL: "host=db port=5432 user=postgres password=postgres dbname=security_monitor sslmode=disable"
+  # ports:
+  #  - "8080:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - microservices-net
+
 volumes:
   postgres_data:
 
