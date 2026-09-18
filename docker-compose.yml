@@ -22,6 +22,17 @@ services:
     build: ./gateway
 #   environment:
 #     DATABASE_URL: "host=db port=5432 user=postgres password=postgres dbname=security_monitor sslmode=disable"
+#    ports:
+#      - "8080:8080"
+    networks:
+      - microservices-net
+  
+  frontend:
+    build: ./frontend
+    environment:
+      GATEWAY_URL: "http://gateway:8080"
+    depends_on:
+      - gateway
     ports:
       - "8080:8080"
     networks:

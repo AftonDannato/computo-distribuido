@@ -89,3 +89,11 @@ func (model *EventModel) GetCriticalEvents() ([]Event, error) {
 
 	return model.scanEvents(rows)
 }
+
+func (model *EventModel) CreateEvent(evento Event) error {
+	_, err := model.db.Exec(`
+		INSERT INTO eventos (origen, tipo, severidad)
+		VALUES ($1, $2, $3)
+	`, evento.Origen, evento.Tipo, evento.Severidad)
+	return err
+}

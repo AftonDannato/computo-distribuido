@@ -2,7 +2,6 @@ package controllers
 
 import (
 	"encoding/json"
-	"html/template"
 	"net/http"
 
 	"github.com/AftonDannato/computo-distribuido/events-backend/models"
@@ -47,26 +46,42 @@ func (controller *EventController) GetCriticalEvents(w http.ResponseWriter, r *h
 	controller.handleRequest(controller.model.GetCriticalEvents)(w, r)
 }
 
-// Función que, en el MVC original, mostraba un dashboard con los eventos
-// Deprecado, actualmente no implementado en la arquitectura actual
-func (controller *EventController) Dashboard(w http.ResponseWriter, r *http.Request) {
-	eventos, err := controller.model.GetAllEvents()
+func (controller *EventController) PostEvent(w http.ResponseWriter, r *http.Request) {
+	var request struct {
+		Origen    string `json:"origen"`
+		Tipo      string `json:"tipo"`
+		Severidad string `json:"severidad"`
+	}
 
+	err := json.NewDecoder(r.Body).Decode(&request)
 	if err != nil {
-		http.Error(w, "Error al obtener los eventos", http.StatusInternalServerError)
+		http.Error(w, "JSON inválido", http.StatusBadRequest)
 		return
 	}
 
-	tmpl, err := template.ParseFiles("templates/index.html")
-
-	if err != nil {
-		http.Error(w, "Error al cargar la vista", http.StatusInternalServerError)
+	if request.Severidad != "Media" && request.Severidad != "Alta" && request.Severidad != "Crítica" {
+		http.Error(w, "Severidad inválida", http.StatusBadRequest)
 		return
 	}
 
-	err = tmpl.Execute(w, eventos)
+	evento := models.Event{
+		Origen:    request.Origen,
+		Tipo:      request.Tipo,
+		Severidad: request.Severidad,
+	}
+
+	err = controller.model.CreateEvent(evento)
 
 	if err != nil {
-		http.Error(w, "Error al generar la vista", http.StatusInternalServerError)
+		http.Error(w, "Error al crear el evento", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+
+	err = json.NewEncoder(w).Encode(map[string]string{"message": "Evento creado correctamente"})
+	if err != nil {
+		http.Error(w, "Error al generar la respuesta", http.StatusInternalServerError)
 	}
 }

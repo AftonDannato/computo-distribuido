@@ -37,9 +37,9 @@ func main() {
 	detectionController := controllers.NewDetectionController(detectionModel)
 
 	router := http.NewServeMux()
-	router.HandleFunc("GET /detection/alerts", detectionController.GetAllAlerts)
-	router.HandleFunc("GET /detection/alerts/critical", detectionController.GetCriticalAlerts)
-	router.HandleFunc("POST /detection/alerts", detectionController.PostAlert)
+	router.HandleFunc("GET /detection", detectionController.GetAllAlerts)
+	router.HandleFunc("GET /detection/critical", detectionController.GetCriticalAlerts)
+	router.HandleFunc("POST /detection", detectionController.PostAlert)
 	router.HandleFunc("GET /heartbeat", heartbeatHandler)
 
 	log.Println("Servidor escuchando en http://localhost:8080")

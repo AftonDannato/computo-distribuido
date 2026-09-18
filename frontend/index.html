@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Monitor de Seguridad</title>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1100px;
+            margin: 40px auto;
+            background: #f4f4f4;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            margin-bottom: 30px;
+        }
+
+        th, td {
+            padding: 10px;
+            border-bottom: 1px solid #ddd;
+            text-align: left;
+        }
+
+        th {
+            background: #eee;
+        }
+
+        form {
+            background: white;
+            padding: 15px;
+            margin-bottom: 30px;
+        }
+
+        input, select, button {
+            padding: 6px;
+            margin-right: 8px;
+        }
+    </style>
+</head>
+
+<body>
+
+<h1>Monitor de Seguridad</h1>
+
+<form method="GET" action="/">
+    <label>
+        Eventos:
+        <select name="events">
+            <option value="all">Todos</option>
+            <option value="critical">Críticos</option>
+        </select>
+    </label>
+
+    <label>
+        Alertas:
+        <select name="alerts">
+            <option value="all">Todas</option>
+            <option value="critical">Críticas</option>
+        </select>
+    </label>
+
+    <label>
+        Incidentes:
+        <select name="incidents">
+            <option value="all">Todos</option>
+            <option value="open">Abiertos</option>
+        </select>
+    </label>
+
+    <button type="submit">Cargar</button>
+</form>
+
+<h2>Crear evento</h2>
+
+<form method="POST" action="/">
+    <input
+        type="text"
+        name="origen"
+        placeholder="Origen"
+        required
+    >
+
+    <input
+        type="text"
+        name="tipo"
+        placeholder="Tipo de evento"
+        required
+    >
+
+    <select name="severidad" required>
+        <option value="Media">Media</option>
+        <option value="Alta">Alta</option>
+        <option value="Crítica">Crítica</option>
+    </select>
+
+    <button type="submit" name="accion" value="evento">
+        Crear evento
+    </button>
+</form>
+
+<h2>Eventos</h2>
+
+<table>
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Origen</th>
+            <th>Tipo</th>
+            <th>Severidad</th>
+            <th>Fecha</th>
+            <th>Atendido</th>
+        </tr>
+    </thead>
+
+    <tbody>
+        {{range .Eventos}}
+        <tr>
+            <td>{{.ID}}</td>
+            <td>{{.Origen}}</td>
+            <td>{{.Tipo}}</td>
+            <td>{{.Severidad}}</td>
+            <td>{{.Fecha}}</td>
+            <td>{{.Atendido}}</td>
+        </tr>
+        {{end}}
+    </tbody>
+</table>
+
+<h2>Crear alerta</h2>
+
+<form method="POST" action="/">
+    <input
+        type="number"
+        name="evento_id"
+        placeholder="Evento ID"
+        required
+    >
+
+    <select name="regla" required>
+        <option value="Evento de severidad crítica">
+            Evento de severidad crítica
+        </option>
+
+        <option value="Prueba">
+            Prueba
+        </option>
+    </select>
+
+    <button type="submit" name="accion" value="alerta">
+        Crear alerta
+    </button>
+</form>
+
+<h2>Alertas</h2>
+
+<table>
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Evento</th>
+            <th>Regla</th>
+            <th>Severidad</th>
+            <th>Fecha</th>
+        </tr>
+    </thead>
+
+    <tbody>
+        {{range .Alertas}}
+        <tr>
+            <td>{{.ID}}</td>
+            <td>{{.EventoID}}</td>
+            <td>{{.Regla}}</td>
+            <td>{{.Severidad}}</td>
+            <td>{{.Fecha}}</td>
+        </tr>
+        {{end}}
+    </tbody>
+</table>
+
+<h2>Abrir incidente</h2>
+
+<form method="POST" action="/">
+    <input
+        type="number"
+        name="alerta_id"
+        placeholder="Alerta ID"
+        required
+    >
+
+    <input
+        type="text"
+        name="descripcion"
+        placeholder="Descripción"
+        required
+    >
+
+    <button type="submit" name="accion" value="incidente">
+        Crear incidente
+    </button>
+</form>
+
+<h2>Incidentes</h2>
+
+<table>
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Alerta</th>
+            <th>Descripción</th>
+            <th>Estado</th>
+            <th>Creación</th>
+            <th>Cierre</th>
+        </tr>
+    </thead>
+
+    <tbody>
+        {{range .Incidentes}}
+        <tr>
+            <td>{{.ID}}</td>
+            <td>{{.AlertaID}}</td>
+            <td>{{.Descripcion}}</td>
+            <td>{{.Estado}}</td>
+            <td>{{.FechaCreacion}}</td>
+            <td>
+                {{if .FechaCierre}}
+                    {{.FechaCierre}}
+                {{else}}
+                    -
+                {{end}}
+            </td>
+        </tr>
+        {{end}}
+    </tbody>
+</table>
+
+</body>
+
+</html>

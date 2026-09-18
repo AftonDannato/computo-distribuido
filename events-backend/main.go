@@ -37,8 +37,9 @@ func main() {
 	eventController := controllers.NewEventController(eventModel)
 
 	router := http.NewServeMux()
-	router.HandleFunc("GET /events/all", eventController.GetAllEvents)
+	router.HandleFunc("GET /events", eventController.GetAllEvents)
 	router.HandleFunc("GET /events/critical", eventController.GetCriticalEvents)
+	router.HandleFunc("POST /events", eventController.PostEvent)
 	router.HandleFunc("GET /heartbeat", heartbeatHandler)
 
 	log.Println("Servidor escuchando en http://localhost:8080")

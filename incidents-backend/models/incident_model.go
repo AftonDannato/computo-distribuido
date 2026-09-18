@@ -64,7 +64,7 @@ func (model *IncidentModel) GetAllIncidents() ([]Incident, error) {
 	rows, err := model.db.Query(`
 		SELECT *
 		FROM incidentes
-		ORDER BY fecha_creacion DESC
+		ORDER BY fecha_creacion ASC
 	`)
 
 	if err != nil {
@@ -80,7 +80,7 @@ func (model *IncidentModel) GetOpenIncidents() ([]Incident, error) {
 		SELECT *
 		FROM incidentes
 		WHERE estado = 'Abierto'
-		ORDER BY fecha_creacion DESC
+		ORDER BY fecha_creacion ASC
 	`)
 
 	if err != nil {
