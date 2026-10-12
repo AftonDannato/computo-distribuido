@@ -24,6 +24,16 @@ services:
 #     DATABASE_URL: "host=db port=5432 user=postgres password=postgres dbname=security_monitor sslmode=disable"
 #    ports:
 #      - "8080:8080"
+    depends_on:
+      - events-backend-1
+      - events-backend-2
+      - events-backend-3
+      - detection-backend-1
+      - detection-backend-2
+      - detection-backend-3
+      - incidents-backend-1
+      - incidents-backend-2
+      - incidents-backend-3
     networks:
       - microservices-net
   

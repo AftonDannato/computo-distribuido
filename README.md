@@ -70,13 +70,15 @@ http://localhost:8080
 - Se comunica internamente con el gateway; las rutas de los backends no se exponen directamente.
 
 **Gateway**
-- Lee `routes.json` como service discovery estático.
-- Agrupa varias instancias por prefijo.
-- Distribuye peticiones mediante Round Robin.
-- Comprueba `/heartbeat` de cada instancia periódicamente.
-- Omite backends marcados como no saludables.
-- Devuelve `503` si no existe ninguna instancia saludable para un servicio.
-- Limita las peticiones concurrentes mediante un canal usado como semáforo.
+- Implementado con Nginx como reverse proxy y load balancer.
+- Define un `upstream` independiente para Events, Detection e Incidents.
+- Enruta las peticiones según el prefijo mediante `location` y `proxy_pass`.
+- Distribuye las peticiones entre las réplicas mediante Round Robin.
+- Detecta fallos de forma pasiva mediante `max_fails` y `fail_timeout`.
+- Omite temporalmente instancias que presentan fallos consecutivos.
+- Expone `/heartbeat` para comprobar que el gateway se encuentra activo.
+
+> La implementación original del gateway en Go se conserva como referencia. La versión actual utiliza Nginx.
 
 **Events Backend**
 - Tres instancias idénticas.
