@@ -18,6 +18,15 @@ services:
     networks:
       - microservices-net
 
+  consul:
+    image: hashicorp/consul:latest
+    container_name: consul
+    command: "agent -dev -client=0.0.0.0 -ui"
+    ports:
+      - "8500:8500"   # HTTP API + web UI: http://localhost:8500/ui
+    networks:
+      - microservices-net
+      
   gateway:
     build: ./gateway
 #   environment:
@@ -25,15 +34,7 @@ services:
 #    ports:
 #      - "8080:8080"
     depends_on:
-      - events-backend-1
-      - events-backend-2
-      - events-backend-3
-      - detection-backend-1
-      - detection-backend-2
-      - detection-backend-3
-      - incidents-backend-1
-      - incidents-backend-2
-      - incidents-backend-3
+      - consul
     networks:
       - microservices-net
   
@@ -51,7 +52,7 @@ services:
   events-backend-1:
     build: ./events-backend
     environment:
-      INSTANCE_ID: events-1
+      INSTANCE_ID: events-backend-1
       DATABASE_URL: "host=db port=5432 user=postgres password=postgres dbname=security_monitor sslmode=disable"
   # ports:
   #  - "8080:8080"
@@ -64,7 +65,7 @@ services:
   events-backend-2:
     build: ./events-backend
     environment:
-      INSTANCE_ID: events-2
+      INSTANCE_ID: events-backend-2
       DATABASE_URL: "host=db port=5432 user=postgres password=postgres dbname=security_monitor sslmode=disable"
   # ports:
   #  - "8080:8080"
@@ -77,7 +78,7 @@ services:
   events-backend-3:
     build: ./events-backend
     environment:
-      INSTANCE_ID: events-3
+      INSTANCE_ID: events-backend-3
       DATABASE_URL: "host=db port=5432 user=postgres password=postgres dbname=security_monitor sslmode=disable"
   # ports:
   #  - "8080:8080"
@@ -90,7 +91,7 @@ services:
   detection-backend-1:
     build: ./detection-backend
     environment:
-      INSTANCE_ID: detection-1
+      INSTANCE_ID: detection-backend-1
       DATABASE_URL: "host=db port=5432 user=postgres password=postgres dbname=security_monitor sslmode=disable"
   # ports:
   #  - "8080:8080"
@@ -103,7 +104,7 @@ services:
   detection-backend-2:
     build: ./detection-backend
     environment:
-      INSTANCE_ID: detection-2
+      INSTANCE_ID: detection-backend-2
       DATABASE_URL: "host=db port=5432 user=postgres password=postgres dbname=security_monitor sslmode=disable"
   # ports:
   #  - "8080:8080"
@@ -116,7 +117,7 @@ services:
   detection-backend-3:
     build: ./detection-backend
     environment:
-      INSTANCE_ID: detection-3
+      INSTANCE_ID: detection-backend-3
       DATABASE_URL: "host=db port=5432 user=postgres password=postgres dbname=security_monitor sslmode=disable"
   # ports:
   #  - "8080:8080"
@@ -129,7 +130,7 @@ services:
   incidents-backend-1:
     build: ./incidents-backend
     environment:
-      INSTANCE_ID: incidents-1
+      INSTANCE_ID: incidents-backend-1
       DATABASE_URL: "host=db port=5432 user=postgres password=postgres dbname=security_monitor sslmode=disable"
   # ports:
   #  - "8080:8080"
@@ -142,7 +143,7 @@ services:
   incidents-backend-2:
     build: ./incidents-backend
     environment:
-      INSTANCE_ID: incidents-2
+      INSTANCE_ID: incidents-backend-2
       DATABASE_URL: "host=db port=5432 user=postgres password=postgres dbname=security_monitor sslmode=disable"
   # ports:
   #  - "8080:8080"
@@ -155,7 +156,7 @@ services:
   incidents-backend-3:
     build: ./incidents-backend
     environment:
-      INSTANCE_ID: incidents-3
+      INSTANCE_ID: incidents-backend-3
       DATABASE_URL: "host=db port=5432 user=postgres password=postgres dbname=security_monitor sslmode=disable"
   # ports:
   #  - "8080:8080"
